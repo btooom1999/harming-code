@@ -1,4 +1,5 @@
 {
+  "homepage": "http://btooom1999.github.io/harming-code",
   "name": "harming-code",
   "version": "0.1.0",
   "private": true,
@@ -12,6 +13,7 @@
     "@types/react-dom": "^17.0.9",
     "@types/react-lottie": "^1.2.6",
     "antd": "^4.16.13",
+    "gh-pages": "^3.2.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-lottie": "^1.2.3",
@@ -21,6 +23,8 @@
     "web-vitals": "^1.0.1"
   },
   "scripts": {
+    "predeloy": "yarn run build",
+    "deploy": "gh-pages -d build",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
