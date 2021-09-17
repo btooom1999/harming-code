@@ -1,0 +1,11 @@
+.site-layout-background {
+  background-color: #fff;
+}
+
+.header {
+  &-form {
+    height: 100%;
+    display: flex;
+    padding: 16px;
+  }
+}
