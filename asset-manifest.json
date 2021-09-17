@@ -1,0 +1,25 @@
+{
+  "files": {
+    "main.css": "/harming-code/static/css/main.4954821b.chunk.css",
+    "main.js": "/harming-code/static/js/main.fdcfacb2.chunk.js",
+    "main.js.map": "/harming-code/static/js/main.fdcfacb2.chunk.js.map",
+    "runtime-main.js": "/harming-code/static/js/runtime-main.de2a846b.js",
+    "runtime-main.js.map": "/harming-code/static/js/runtime-main.de2a846b.js.map",
+    "static/css/2.a95be28f.chunk.css": "/harming-code/static/css/2.a95be28f.chunk.css",
+    "static/js/2.14a517b1.chunk.js": "/harming-code/static/js/2.14a517b1.chunk.js",
+    "static/js/2.14a517b1.chunk.js.map": "/harming-code/static/js/2.14a517b1.chunk.js.map",
+    "static/js/3.f3a056b2.chunk.js": "/harming-code/static/js/3.f3a056b2.chunk.js",
+    "static/js/3.f3a056b2.chunk.js.map": "/harming-code/static/js/3.f3a056b2.chunk.js.map",
+    "index.html": "/harming-code/index.html",
+    "static/css/2.a95be28f.chunk.css.map": "/harming-code/static/css/2.a95be28f.chunk.css.map",
+    "static/css/main.4954821b.chunk.css.map": "/harming-code/static/css/main.4954821b.chunk.css.map",
+    "static/js/2.14a517b1.chunk.js.LICENSE.txt": "/harming-code/static/js/2.14a517b1.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.de2a846b.js",
+    "static/css/2.a95be28f.chunk.css",
+    "static/js/2.14a517b1.chunk.js",
+    "static/css/main.4954821b.chunk.css",
+    "static/js/main.fdcfacb2.chunk.js"
+  ]
+}
