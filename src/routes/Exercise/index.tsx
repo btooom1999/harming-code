@@ -1,63 +1,92 @@
-import { Col, Divider, Layout, Row, Space, Table, Typography } from "antd";
-import React, { FC, useEffect, useMemo, useState } from "react";
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable no-useless-computed-key */
+/* eslint-disable no-lone-blocks */
+import {
+  Col,
+  Divider,
+  Layout,
+  Row,
+  Table,
+  Typography,
+  Form,
+  Input,
+  Button,
+} from "antd";
+import { FC, useMemo, useState } from "react";
 import { Breadcrumb, Footer, Header, Sider } from "../../models";
 import { _math } from "../../ultis";
 import Lottie from "react-lottie";
 import working from "../../assets/images/working.json";
 import "./index.scss";
 
+const { useForm } = Form;
 const { Text } = Typography;
 const { Content } = Layout;
 
+type IForm = {
+  errorPosition: string;
+};
+
 const Index: FC = () => {
   // calculate harming code
-  const [dataBitInput, setDataBitInput] = useState("");
-  const [dataBitOutput, setDataBitOutput] = useState("");
+  const [bit, setBit] = useState("");
+  const [errorPosition, setErrorPosition] = useState(-1);
   const [checkBit, setCheckBit] = useState(-1);
 
-  const onValueChange = (dataBitInput: string, dataBitOutput: string) => {
-    setDataBitInput(dataBitInput);
-    setDataBitOutput(dataBitOutput);
-    setCheckBit(_math.calcCheckBit(dataBitInput));
+  const onValueChange = (bit: string) => {
+    setBit(bit);
+    setCheckBit(_math.calcCheckBit(bit));
+    setErrorPosition(-1);
   };
 
   // get data bit and check bit, syndrome data, ...
-  const _XORDataBit = useMemo(
-    () => _math.checkXORBit(dataBitInput),
-    [dataBitInput]
-  );
-
   const data = useMemo(
-    () => _math.getDataBitAndCheckBitArray(dataBitInput.length + checkBit),
-    [dataBitInput.length + checkBit]
+    () => _math.getDataBitAndCheckBitArray(bit.length + checkBit, bit),
+    [bit.length + checkBit, bit]
   );
 
-  const checkBitInput = useMemo(
-    () => _math.calcCheckBitArray(data[1], dataBitInput),
-    [data[1], dataBitInput]
+  const parityBits = useMemo(
+    () => _math.calcCheckBitArray(data[1], bit),
+    [data, bit]
   );
 
-  const checkBitOutput = useMemo(
-    () => _math.calcCheckBitArray(data[1], dataBitOutput),
-    [data[1], dataBitOutput]
+  const bitWithEvenParityBits = useMemo(
+    () => _math.getFullBit(bit, data[0], parityBits[2][0].join("")),
+    [data, bit, parityBits]
   );
 
-  const syndrome = useMemo(
+  const errorBitWithParityBits = useMemo(
+    () => _math.getErrorBit(bitWithEvenParityBits, errorPosition),
+    [bitWithEvenParityBits, errorPosition]
+  );
+
+  const shortErrorBit = useMemo(
+    () => _math.getShortErrorBit(data[0], errorBitWithParityBits),
+    [data[0], errorBitWithParityBits]
+  );
+
+  const errorParityBits = useMemo(
+    () => _math.calcCheckBitArray(data[1], shortErrorBit),
+    [data, shortErrorBit]
+  );
+
+  const positionError = useMemo(
     () =>
-      _math.getSyndrome(
-        checkBitInput[2][0] as number[],
-        checkBitOutput[2][0] as number[]
+      _math.getPositionError(
+        parityBits[2][0] as number[],
+        errorParityBits[2][0] as number[]
       ),
-    [checkBitInput[2][0], checkBitOutput[2][0]]
+    [parityBits[2][0], errorParityBits[2][0]]
   );
 
   // customize table
+  const colData = _math.getNumberArray(bit.length + checkBit);
   const columns = [
     {
-      title: "Bit position",
-      dataIndex: "Bit position",
+      title: "Thứ tự bit",
+      dataIndex: "Thứ tự bit",
     },
-    ..._math.getNumberArray(dataBitInput.length + checkBit).map((i, index) => {
+    ...colData.map((i, index) => {
       return {
         title: i,
         dataIndex: index,
@@ -69,22 +98,73 @@ const Index: FC = () => {
   const rows = [
     {
       key: "1",
-      ["Bit position"]: "Position number",
-      ..._math
-        .getBinaryNumberArray(dataBitInput.length + checkBit)
-        .map((i) => i),
+      ["Thứ tự bit"]: "Nhị phân",
+      ..._math.getBinaryNumberArray(bit.length + checkBit).map((i) => i),
     },
     {
       key: "2",
-      ["Bit position"]: "Data bit",
+      ["Thứ tự bit"]: "Nhóm dữ liệu (không có bit chẵn lẽ)",
       ...data[0].map((i) => i),
     },
     {
       key: "3",
-      ["Bit position"]: "Check bit",
+      ["Thứ tự bit"]: "Bit chẵn lẽ",
       ...data[0].map((i, index) => {
         if (i !== null) return null;
-        return "C" + (dataBitInput.length + checkBit - index);
+        return "P" + (index + 1);
+      }),
+    },
+  ];
+
+  const errorColumns = [
+    {
+      title: "Thứ tự bit",
+      dataIndex: "Thứ tự bit",
+    },
+    ...colData.map((i, index) => {
+      return {
+        title:
+          index === errorPosition - 1 ? (
+            <Text strong type="danger">
+              {i}
+            </Text>
+          ) : (
+            i
+          ),
+        dataIndex: index,
+        align: "center",
+      } as const;
+    }),
+  ];
+
+  const errorRows = [
+    {
+      key: "1",
+      ["Thứ tự bit"]: "Nhị phân",
+      ..._math.getBinaryNumberArray(bit.length + checkBit).map((i) => i),
+    },
+    {
+      key: "2",
+      ["Thứ tự bit"]: "Nhóm dữ liệu (không có bit chẵn lẽ)",
+      ...data[0].map((i: string, index) => {
+        {
+          if (i !== null) {
+            let val = bitWithEvenParityBits[index];
+            if (index === errorPosition - 1) {
+              val = val === "1" ? "0" : "1";
+            }
+            return val + " - " + i.split(" - ")[1];
+          }
+          return i;
+        }
+      }),
+    },
+    {
+      key: "3",
+      ["Thứ tự bit"]: "Bit chẵn lẽ",
+      ...data[0].map((i, index) => {
+        if (i !== null) return null;
+        return "P" + (index + 1);
       }),
     },
   ];
@@ -99,6 +179,12 @@ const Index: FC = () => {
     },
   };
 
+  // example 1 error in bit
+  const [form] = useForm<IForm>();
+  const onFinish = (data: IForm) => {
+    setErrorPosition(parseInt(data.errorPosition));
+  };
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sider />
@@ -110,13 +196,12 @@ const Index: FC = () => {
             className="site-layout-background"
             style={{ padding: 24, height: "100%" }}
           >
-            {(!dataBitInput.length ||
-              _math.getEquationResult(dataBitInput.length, checkBit) ===
-                -1) && (
+            {(!bit.length ||
+              _math.getEquationResult(bit.length, checkBit) === -1) && (
               <Lottie options={defaultOptionsLottie} width={600} height={400} />
             )}
-            {dataBitInput.length > 0 &&
-              _math.getEquationResult(dataBitInput.length, checkBit) === 1 && (
+            {bit.length > 0 &&
+              _math.getEquationResult(bit.length, checkBit) === 1 && (
                 <>
                   <Table
                     bordered
@@ -136,217 +221,228 @@ const Index: FC = () => {
                     H1. Bảng phân tích
                   </Text>
                   <Row gutter={16}>
-                    <Col span={8} style={{ padding: "12px 8px 0" }}>
-                      <Divider orientation="left">
-                        Tính K bit đầu vào ({dataBitInput})
-                      </Divider>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column-reverse",
-                        }}
-                      >
-                        {[...checkBitInput[0]].map((i: any, index) => (
+                    <Col span={12} style={{ padding: "12px 8px 0" }}>
+                      <Divider orientation="left">Tính K</Divider>
+                      <div>
+                        {[...parityBits[0]].map((i: any, index) => (
                           <div key={index} style={{ marginTop: 8 }}>
-                            <span>C{i[0]} = </span>
+                            <span>P{i[0]} = </span>
                             {[...i.slice(1)].map((s, p) => {
                               let plus = " + ";
                               if (p === 0) plus = "";
                               return <span key={p}>{plus + s}</span>;
                             })}
                             <span> = </span>
-                            {[...checkBitInput[1][index]].map((n, p) => {
+                            {[...parityBits[1][index]].map((n, p) => {
                               let plus = " + ";
-                              if (p === 0) plus = "";
+                              if (p === 0) return null;
+                              else if (p === 1) plus = "";
                               return <span key={p}> {plus + n}</span>;
                             })}
                             <span> = </span>
-                            <span>{checkBitInput[2][0][index]}</span>
+                            <span>{parityBits[2][0][index]}</span>
                           </div>
                         ))}
+                        <div>
+                          <Text strong>
+                            {"=>"} K ={" "}
+                            {[...parityBits[0]].map((_, index) => (
+                              <span key={index}>
+                                {
+                                  parityBits[2][0][
+                                    parityBits[0].length - 1 - index
+                                  ]
+                                }
+                              </span>
+                            ))}
+                          </Text>
+                        </div>
+                        <div>
+                          <Text>
+                            Như vậy, ta có nhóm dữ liệu mới bao gồm các bit chẵn
+                            lẻ là <b>{bitWithEvenParityBits}</b>
+                          </Text>
+                        </div>
                       </div>
                     </Col>
-                    <Col span={8} style={{ padding: "12px 8px 0" }}>
+                    <Col span={12} style={{ padding: "12px 8px 0" }}>
                       <Divider orientation="left">
-                        Tính K' bit đầu ra ({dataBitOutput})
+                        Giả sử có 1 bit sai ({shortErrorBit})
                       </Divider>
-                      {dataBitOutput.length === dataBitInput.length && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column-reverse",
-                          }}
+                      <Text>
+                        Từ nhóm dữ liệu bao gồm các bit chẵn lẽ có 1 bit sai tại
+                        vị trí
+                      </Text>
+                      <Form
+                        form={form}
+                        layout="inline"
+                        className="header-form"
+                        onFinish={onFinish}
+                        style={{ height: "auto" }}
+                      >
+                        <Form.Item
+                          label="Vị trí sai"
+                          name="errorPosition"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Vui lòng nhập vị trí sai!",
+                            },
+                            {
+                              pattern: /^[0-9]*$/,
+                              message: "Trường này chỉ được nhập số!",
+                            },
+                            {
+                              min: 1,
+                              max: (bit.length + checkBit).toString().length,
+                              message:
+                                "Số lượng kí tự được cho phép là " +
+                                Math.round((bit.length + checkBit) / 10),
+                            },
+                            ({ getFieldValue }) => ({
+                              validator(_, value) {
+                                if (
+                                  !value ||
+                                  (value > 0 && value <= colData.length)
+                                ) {
+                                  return Promise.resolve();
+                                }
+                                return Promise.reject(
+                                  new Error(
+                                    "Chỉ được nhập các số từ 1 - " +
+                                      colData.length
+                                  )
+                                );
+                              },
+                            }),
+                          ]}
+                          style={{ marginBottom: 0 }}
                         >
-                          {[...checkBitOutput[0]].map((i: any, index) => (
-                            <div key={index} style={{ marginTop: 8 }}>
-                              <span>C{i[0]} = </span>
-                              {[...i.slice(1)].map((s, p) => {
-                                let plus = " + ";
-                                if (p === 0) plus = "";
-                                return <span key={p}>{plus + s}</span>;
-                              })}
-                              <span> = </span>
-                              {[...checkBitOutput[1][index]].map((n, p) => {
-                                let plus = " + ";
-                                if (p === 0) plus = "";
-                                return <span key={p}> {plus + n}</span>;
-                              })}
-                              <span> = </span>
-                              <span>{checkBitOutput[2][0][index]}</span>
-                            </div>
-                          ))}
-                        </div>
+                          <Input placeholder="VD: 10111001" />
+                        </Form.Item>
+                        <Form.Item>
+                          <Button type="primary" htmlType="submit">
+                            Submit
+                          </Button>
+                        </Form.Item>
+                      </Form>
+                      {errorPosition > 0 && (
+                        <>
+                          <div>
+                            <Text strong italic>
+                              * Cách thay đổi bit có 1 vị trí sai. Nếu vị trí đó
+                              là 1 thì đổi thành 0 và ngược lại.
+                            </Text>
+                          </div>
+                          <div>
+                            <Text>
+                              Thay đổi <b>{bitWithEvenParityBits}</b> có{" "}
+                              <b>vị trí sai là {errorPosition}</b> thành{" "}
+                              <b>{errorBitWithParityBits}</b>
+                            </Text>
+                          </div>
+                        </>
                       )}
                     </Col>
-                    <Col span={8} style={{ padding: "12px 8px 0" }}>
-                      <Divider orientation="left">Kết quả syndrome</Divider>
-                      <div
-                        style={{
-                          marginTop: 8,
-                          display: "inline-flex",
-                          flexDirection: "column",
-                        }}
-                      >
-                        <div>
-                          <span style={{ margin: "0px 10px" }}>K: </span>
-                          {checkBitInput[2][0]
-                            .reverse()
-                            .map((i: any, index: number) => (
-                              <span key={index} style={{ margin: "0px 10px" }}>
-                                {i}
-                              </span>
-                            ))}
-                        </div>
-                        <div>
-                          <span style={{ margin: "0px 7.5px 0px 10px" }}>
-                            K':{" "}
-                          </span>
-                          {checkBitOutput[2][0]
-                            .reverse()
-                            .map((i: any, index: number) => (
-                              <span key={index} style={{ margin: "0px 10px" }}>
-                                {i}
-                              </span>
-                            ))}
-                        </div>
-                        <Divider style={{ margin: "8px 0" }} />
-                        <div>
-                          <span style={{ margin: "0px 10px" }}>C: </span>
-                          {[...(syndrome[0] as string[])].map((i, index) => (
-                            <span key={index} style={{ margin: "0px 10px" }}>
-                              {i}
-                            </span>
-                          ))}
-                          {_XORDataBit === 1 && (syndrome[1] as number) !== 0 && (
-                            <Text strong type="danger">
-                              {" "}
-                              {`=> Phát hiện lỗi tại vị trí: ${syndrome[1]} (D${
-                                (syndrome[1] as number) - checkBit
-                              })`}
-                            </Text>
-                          )}
-                          {_XORDataBit === 0 && (syndrome[1] as number) === 0 && (
-                            <Text strong type="success">
-                              {" "}
-                              {`=> Không có lỗi`}
-                            </Text>
-                          )}
-                          {_XORDataBit === 0 && (syndrome[1] as number) !== 0 && (
-                            <Text strong type="danger">
-                              {" "}
-                              {`=> Có từ 2 lỗi trở lên`}
-                            </Text>
-                          )}
-                        </div>
-                      </div>
-                    </Col>
                   </Row>
-                  <div>
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Divider orientation="center">Giải thích</Divider>
-                        <Space direction="vertical">
-                          <Text italic>
-                            - Điều kiện 1: C = 0 và P = 0, không có lỗi nào{" "}
-                            {_XORDataBit === 0 &&
-                              (syndrome[1] as number) === 0 && <b>(Thỏa)</b>}
-                          </Text>
-                          {_XORDataBit === 0 && (syndrome[1] as number) === 0 && (
-                            <div className="result">
-                              <Text>{`Vì: C = ${syndrome[1]} và P = `}</Text>
-                              {[..._math.getArrayDataBit(dataBitInput)].map(
-                                (i, index) => {
-                                  if (index === 0)
-                                    return <Text> {`${i} `}</Text>;
-                                  return <Text> {`+ ${i} `}</Text>;
-                                }
-                              )}
-                              <Text>{`= ${_XORDataBit}`}</Text>
-                            </div>
-                          )}
-                          <Text italic>
-                            - Điều kiện 2: C ≥ 0 và P = 1, Phát hiện 1 lỗi, có
-                            thể sửa lỗi{" "}
-                            {_XORDataBit === 1 &&
-                              (syndrome[1] as number) !== 0 && <b>(Thỏa)</b>}
-                          </Text>
-                          {_XORDataBit === 1 && (syndrome[1] as number) !== 0 && (
-                            <div className="result">
-                              <Text>{`Vì: C = ${syndrome[1]} và P = `}</Text>
-                              {[..._math.getArrayDataBit(dataBitInput)].map(
-                                (i, index) => {
-                                  if (index === 0)
-                                    return <Text> {`${i} `}</Text>;
-                                  return <Text> {`+ ${i} `}</Text>;
-                                }
-                              )}
-                              <Text>{`= ${_XORDataBit}`}</Text>
-                            </div>
-                          )}
-                          <Text italic>
-                            - Điều kiện 3: C ≠ 0 và P = 0, Phát hiện 2 lỗi trở
-                            lên, không thể sửa lỗi{" "}
-                            {_XORDataBit === 0 &&
-                              (syndrome[1] as number) !== 0 && <b>(Thoả)</b>}
-                          </Text>
-                          {_XORDataBit === 0 && (syndrome[1] as number) !== 0 && (
-                            <div className="result">
-                              <Text>{`Vì: C = ${syndrome[1]} và P = `}</Text>
-                              {[..._math.getArrayDataBit(dataBitInput)].map(
-                                (i, index) => {
-                                  if (index === 0)
-                                    return <Text> {`${i} `}</Text>;
-                                  return <Text> {`+ ${i} `}</Text>;
-                                }
-                              )}
-                              <Text>{`= ${_XORDataBit}`}</Text>
-                            </div>
-                          )}
-                        </Space>
-                      </Col>
-                      <Col span={12}>
-                        <Divider orientation="center">Sửa lỗi</Divider>
-                        {_XORDataBit === 0 && (syndrome[1] as number) === 0 && (
-                          <Text italic>
-                            - Thuộc điều kiện 1 nên không có lỗi để sửa
-                          </Text>
-                        )}
-                        {_XORDataBit === 1 && (syndrome[1] as number) !== 0 && (
-                          <Text italic>
-                            - Thuộc điều kiện 2 nên đổi data bit đầu vào có vị
-                            trí sai từ 1 - 0 hoặc ngược lại
-                          </Text>
-                        )}
-                        {_XORDataBit === 0 && (syndrome[1] as number) !== 0 && (
-                          <Text italic>
-                            - Thuộc điều kiện 3 nên không thể sửa lỗi
-                          </Text>
-                        )}
-                      </Col>
-                    </Row>
-                  </div>
                 </>
               )}
+            {errorPosition > 0 && (
+              <div style={{ marginTop: 30 }}>
+                <Divider>Sửa sai</Divider>
+                <Table
+                  bordered
+                  columns={errorColumns}
+                  dataSource={errorRows}
+                  pagination={false}
+                />
+                <Text
+                  strong
+                  italic
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    marginTop: 8,
+                  }}
+                >
+                  H2. Bảng phân tích
+                </Text>
+                <Row gutter={16}>
+                  <Col span={12} style={{ padding: "12px 8px 0" }}>
+                    <Divider orientation="left">Tính K'</Divider>
+                    <div>
+                      {[...errorParityBits[0]].map((i: any, index) => (
+                        <div key={index} style={{ marginTop: 8 }}>
+                          <span>P{i[0]} = </span>
+                          {[...i.slice(1)].map((s, p) => {
+                            let plus = " + ";
+                            if (p === 0) plus = "";
+                            return <span key={p}>{plus + s}</span>;
+                          })}
+                          <span> = </span>
+                          {[...errorParityBits[1][index]].map((n, p) => {
+                            let plus = " + ";
+                            if (p === 0) return null;
+                            else if (p === 1) plus = "";
+                            return <span key={p}> {plus + n}</span>;
+                          })}
+                          <span> = </span>
+                          <span>{errorParityBits[2][0][index]}</span>
+                        </div>
+                      ))}
+                      <div>
+                        <Text strong>
+                          {"=>"} K' ={" "}
+                          {[...errorParityBits[0]].map((_, index) => (
+                            <span key={index}>
+                              {
+                                errorParityBits[2][0][
+                                  errorParityBits[0].length - 1 - index
+                                ]
+                              }
+                            </span>
+                          ))}
+                        </Text>
+                      </div>
+                      <div>
+                        <Text>
+                          Như vậy, ta có nhóm dữ liệu mới bao gồm các bit chẵn
+                          lẻ là <b>{errorBitWithParityBits}</b>
+                        </Text>
+                      </div>
+                    </div>
+                  </Col>
+                  <Col span={12} style={{ padding: "12px 8px 0" }}>
+                    <Divider orientation="left">Tìm lỗi</Divider>
+                    <div>
+                      <Text>
+                        Ta có K + K' ={" "}
+                        {[...(parityBits[2][0] as number[])].reverse()} +{" "}
+                        {[...(errorParityBits[2][0] as number[])].reverse()} ={" "}
+                        {positionError.binary} (Nhị phân) ={" "}
+                        {positionError.decimal} (Thập phân)
+                      </Text>
+                    </div>
+                    <div>
+                      {positionError.decimal > 0 && (
+                        <Text strong type="danger">
+                          {"=>"} Lỗi ngay tại vị trí số {positionError.decimal}.
+                          Như vậy kết quả cuối cùng thu được là thay đổi{" "}
+                          <b>{errorBitWithParityBits}</b> có{" "}
+                          <b>vị trí sai là {positionError.decimal}</b> thành{" "}
+                          <b>{bitWithEvenParityBits}</b>
+                        </Text>
+                      )}
+                      {positionError.decimal === 0 && (
+                        <Text strong type="success">
+                          {"=>"} Không có bất kỳ lỗi nào
+                        </Text>
+                      )}
+                    </div>
+                  </Col>
+                </Row>
+              </div>
+            )}
           </div>
         </Content>
         <Footer />

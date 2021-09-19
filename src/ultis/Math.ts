@@ -43,7 +43,6 @@ class math {
   };
 
   getEquationResult = (dataBit: number, checkBit: number) => {
-    console.log("dataBit: ", dataBit);
     const resultLeft = this.get2ExponentNumber(checkBit) - 1;
     const resultRight = dataBit + checkBit;
     if (resultLeft >= resultRight) {
@@ -68,7 +67,7 @@ class math {
   getNumberArray = (number: number) => {
     const arr = [];
     for (let i = 1; i <= number; i++) {
-      arr[number - i] = i;
+      arr[i - 1] = i;
     }
     return arr;
   };
@@ -76,7 +75,7 @@ class math {
   getBinaryNumberArray = (number: number) => {
     const arr = [];
     for (let i = 1; i <= number; i++) {
-      arr[number - i] = this.getBinaryNumber(i);
+      arr[i - 1] = this.getBinaryNumber(i);
     }
     return arr;
   };
@@ -94,7 +93,7 @@ class math {
     return -2;
   };
 
-  getDataBitAndCheckBitArray = (number: number) => {
+  getDataBitAndCheckBitArray = (number: number, dataBit: string) => {
     const index = [];
     const arr = [];
     for (let i = 1; i <= number; i++) {
@@ -104,7 +103,10 @@ class math {
       arr[i - 1] = "D" + i;
     }
 
-    index.forEach((i) => (arr[i[0] - 1] = null));
+    index.forEach((i) => {
+      console.log("i: ", i);
+      arr[i[0] - 1] = null;
+    });
 
     let x = 1;
     const newArr: Array<any> = arr.map((i) => {
@@ -131,42 +133,87 @@ class math {
       return i;
     });
 
-    return [[...newArr.reverse()], [...index]];
+    console.log("index: ", index);
+
+    let positionBit = 0;
+    const result = [
+      [
+        ...newArr.map((i) => {
+          if (i !== null) return dataBit[positionBit++] + " - " + i;
+          return i;
+        }),
+      ],
+      [...index],
+    ];
+    return result;
   };
 
   getXORValue = (array: number[]) => {
     let result = 0;
-    array.forEach((i) => (result += i));
+    array.forEach((i, index) => {
+      if (index !== 0) result += i;
+    });
     return result % 2;
   };
 
   calcCheckBitArray = (dataBit: (number[] | string[])[], bit: string) => {
-    const bitLen = bit.length;
-    const newArr = dataBit.map((i) =>
-      i.slice(1).map((s: any) => parseInt(bit[bitLen - parseInt(s?.slice(1))]))
+    const newArr = dataBit.map((item) =>
+      item.map((i: string | number) => {
+        if (typeof i !== "number") {
+          console.log(bit[parseInt(i.split("D")[1]) - 1] + " thuộc: " + bit);
+          return parseInt(bit[parseInt(i.split("D")[1]) - 1]);
+        } else {
+          console.log("vi tri: ", i);
+        }
+        return i;
+      })
     );
 
-    return [
+    const result = [
       [...dataBit],
       [...newArr],
       [[...newArr.map((item) => this.getXORValue(item))]],
     ];
-  };
-
-  getSyndrome = (
-    checkBitArray1: Array<number>,
-    checkBitArray2: Array<number>
-  ) => {
-    const syndrome: string[] = [];
-    checkBitArray1.forEach((i, index) => {
-      const val = i + checkBitArray2[index] > 1 ? 0 : i + checkBitArray2[index];
-      syndrome[index] = val.toString();
-    });
-
-    const result = [[...syndrome.reverse()], parseInt(syndrome.join(""), 2)];
-    console.log("result: ", result);
 
     return result;
+  };
+
+  getFullBit = (bit: string, oddParityBits: string[], parityBits: string) => {
+    let numBitInput = 0;
+    let numParityBits = 0;
+    const newOddParityBits = oddParityBits.map((i) => {
+      if (i !== null) return bit[numBitInput++];
+      return parityBits[numParityBits++];
+    });
+    return newOddParityBits.join("");
+  };
+
+  getErrorBit = (bit: string, positionError: number) => {
+    const first = bit.slice(0, positionError - 1);
+    const mid = bit[positionError - 1] === "1" ? 0 : 1;
+    const last = bit.slice(positionError);
+    return first + mid + last;
+  };
+
+  getShortErrorBit = (notParityBits: (string | null)[], errorBit: string) => {
+    const result = notParityBits
+      .map((i, index) => {
+        if (i !== null) return errorBit[index];
+        return null;
+      })
+      .filter((i) => i !== null);
+
+    return result.join("");
+  };
+
+  getPositionError = (bit: number[], errorBit: number[]) => {
+    const binary: number[] = [];
+    bit.forEach((i, index) => {
+      const val = i + errorBit[index];
+      binary.push(val > 1 ? 0 : val);
+    });
+    const decimal = parseInt(binary.reverse().join(""), 2);
+    return { binary, decimal };
   };
 }
 
